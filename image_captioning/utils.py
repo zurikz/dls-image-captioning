@@ -59,6 +59,7 @@ class CaptionDataset(Dataset):
         if split == 'train':
             self.img_codes = self.img_codes[:idx]
             self.captions = self.captions[:idx]
+            self.encode_sentences(vocab)
         if split == 'val':
             self.img_codes = self.img_codes[idx:(idx + 5000)]
             self.captions = self.captions[idx:(idx + 5000)]
@@ -67,7 +68,6 @@ class CaptionDataset(Dataset):
             self.captions = self.captions[(idx + 5000):]
 
         self.sort_dataset()
-        self.encode_sentences(vocab)
 
     def encode_sentences(self, vocab, max_len=20):
         for idx in range(len(self.captions)):
@@ -89,15 +89,15 @@ class CaptionDataset(Dataset):
 
     def __getitem__(self, idx):
         img = self.img_codes[idx]
-        captions = [torch.tensor(caption) for caption in self.captions[idx]]
-        captions = pad_sequence(captions, batch_first=True)
         if self.split == 'train':
-            random = np.random.randint(low=0, high=len(captions))
-            caption = captions[random]
-            return (torch.tensor(img), caption, torch.tensor(len(caption)))
+            random = np.random.randint(low=0, high=len(self.captions[idx]))
+            caption = self.captions[idx][random]
+            return (torch.tensor(img), 
+                    torch.tensor(caption), 
+                    torch.tensor(len(caption)))
         else:
-            return (torch.tensor(img), captions, 
-                    torch.tensor([len(caption) for caption in captions]))
+            return (torch.tensor(img), 
+                    self.captions[idx])
 
     def __len__(self):
         return len(self.captions)
