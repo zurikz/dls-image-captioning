@@ -3,7 +3,26 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence
 from torch.nn.utils.rnn import pad_packed_sequence
 
-class CaptionNet(nn.Module):
+
+class Attention(nn.Module):
+    def __init__(self, cnn_feature_size, hidden_size, attention_dim):
+        super().__init__()
+        self.encoder_attn = nn.Linear(cnn_feature_size, attention_dim)
+        self.decoder_attn = nn.Linear(hidden_size, attention_dim)
+        self.full_attn = nn.Linear(attention_dim, 1)
+        self.relu = nn.ReLU()
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, img, hidden_state):
+        """
+        :param img: encoded images - (batch_size, cnn_feature_size)
+        :param hidden_state: on the t-step - (batch_size, hidden_size)
+        """
+        attn1 = self.encoder_attn(img) # (batch_size, attention_dim)
+        attn2 = self.decoder_attn(hidden_state) # (batch_size, attention_dim)
+        attn = self.full_attn(self.relu(attn1 + attn2))
+
+class AttentionDecoder(nn.Module):
     def __init__(self, vocab, hidden_size, num_layers, lstm_dropout=0.3,
                  fc_dropout=0.3, embedding_dim=300, cnn_feature_size=2048):
         super().__init__()

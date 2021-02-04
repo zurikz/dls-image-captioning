@@ -53,6 +53,7 @@ class CaptionDataset(Dataset):
         self.captions = json.load(open(captions_path))
 
         assert split in {'train', 'val', 'test'}
+        self.split = split
 
         idx = len(self.img_codes) - 10000
         if split == 'train':
@@ -88,12 +89,15 @@ class CaptionDataset(Dataset):
 
     def __getitem__(self, idx):
         img = self.img_codes[idx]
-        captions = self.captions[idx]
-        random = np.random.randint(low=0, high=len(captions))
-        caption = captions[random]
-        return (torch.tensor(img),
-                torch.tensor(caption),
-                torch.tensor(len(caption)))
+        captions = [torch.tensor(caption) for caption in self.captions[idx]]
+        captions = pad_sequence(captions, batch_first=True)
+        if self.split == 'train':
+            random = np.random.randint(low=0, high=len(captions))
+            caption = captions[random]
+            return (torch.tensor(img), caption, torch.tensor(len(caption)))
+        else:
+            return (torch.tensor(img), captions, 
+                    torch.tensor([len(caption) for caption in captions]))
 
     def __len__(self):
         return len(self.captions)
@@ -101,9 +105,14 @@ class CaptionDataset(Dataset):
 
 def pad_collate_fn(batch):
     image_vectors, captions, lenghts = zip(*batch)
-
     padded_captions = pad_sequence(captions, batch_first=True)
     image_vectors = torch.stack(image_vectors)
     lenghts = torch.stack(lenghts)
-
     return image_vectors, padded_captions, lenghts
+
+
+def create_datasets(vocab: Vocab, img_codes_path, captions_path):
+    train = CaptionDataset('train', vocab, img_codes_path, captions_path)
+    val = CaptionDataset('val', vocab, img_codes_path, captions_path)
+    test = CaptionDataset('test', vocab, img_codes_path, captions_path)
+    return {'train': train, 'val': val, 'test': test}

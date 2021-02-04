@@ -7,6 +7,9 @@
 ###############################################
 /data/
 
+# Pylance
+pyrightconfig.json
+
 ### OSX ###
 # General
 .DS_Store
