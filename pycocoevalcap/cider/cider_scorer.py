@@ -196,7 +196,7 @@ class CiderScorer(object):
             # assert to check document frequency
             assert(len(self.ctest) >= max(self.document_frequency.values()))
         else:
-            docFreq = pickle.load(open(os.path.join('tools/coco-caption/data', \
+            docFreq = pickle.load(open(os.path.join('', \
                                                         df_mode + '.p'), 'r'))
             self.document_frequency = docFreq['df']
             # TODO: make this a part of coco-val-df

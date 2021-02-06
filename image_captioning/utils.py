@@ -51,6 +51,7 @@ class CaptionDataset(Dataset):
                  img_codes_path: str, captions_path: str):
         self.img_codes = np.load(img_codes_path)
         self.captions = json.load(open(captions_path))
+        self.vocab = vocab
 
         assert split in {'train', 'val', 'test'}
         self.split = split
@@ -59,7 +60,7 @@ class CaptionDataset(Dataset):
         if split == 'train':
             self.img_codes = self.img_codes[:idx]
             self.captions = self.captions[:idx]
-            self.encode_sentences(vocab)
+            self.encode_dataset()
         if split == 'val':
             self.img_codes = self.img_codes[idx:(idx + 5000)]
             self.captions = self.captions[idx:(idx + 5000)]
@@ -69,14 +70,14 @@ class CaptionDataset(Dataset):
 
         self.sort_dataset()
 
-    def encode_sentences(self, vocab, max_len=20):
+    def encode_dataset(self, max_len=20):
         for idx in range(len(self.captions)):
             for sent_idx in range(len(self.captions[idx])):
                 sent = '<sos> ' + self.captions[idx][sent_idx] + ' <eos>'
-                encoded_sent = vocab.stoi(sent.split())
+                encoded_sent = self.vocab.stoi(sent.split())
                 if len(encoded_sent) > max_len:
                     encoded_sent = encoded_sent[:max_len]
-                    encoded_sent[-1] = vocab.stoi('<eos>')
+                    encoded_sent[-1] = self.vocab.stoi('<eos>')
                 self.captions[idx][sent_idx] = encoded_sent
 
     def sort_dataset(self):
@@ -89,15 +90,14 @@ class CaptionDataset(Dataset):
 
     def __getitem__(self, idx):
         img = self.img_codes[idx]
-        if self.split == 'train':
-            random = np.random.randint(low=0, high=len(self.captions[idx]))
-            caption = self.captions[idx][random]
-            return (torch.tensor(img), 
-                    torch.tensor(caption), 
-                    torch.tensor(len(caption)))
-        else:
-            return (torch.tensor(img), 
-                    self.captions[idx])
+        random = np.random.randint(low=0, high=len(self.captions[idx]))
+        caption = self.captions[idx][random]
+        if self.split in ['val', 'test']:
+            caption = ('<sos> ' + caption + ' <eos>').split()
+            caption = [self.vocab.stoi(word) for word in caption]
+        return (torch.tensor(img), 
+                torch.tensor(caption), 
+                torch.tensor(len(caption)))
 
     def __len__(self):
         return len(self.captions)
